@@ -48,7 +48,7 @@ class Deck():
         return len(self.cards)
 
     def draw_a_card(self):
-        if len(self.cards) > 1:
+        if len(self.cards) > 0:
             return self.cards.pop()
         else:
             self.cards = self.pile
