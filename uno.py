@@ -1,7 +1,19 @@
 import random
+import select
+import socket
 from termcolor import colored
+from network import Network
 
 COLORS = ['red', 'green', 'yellow', 'blue']
+HEADER_LENGTH = 10
+
+server = "the server ip"
+port = 5555
+server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+server_socket.bind((server, port))
+server_socket.listen()
+sockets_list = [server_socket]
 
 def uniqueid():
     seed = random.getrandbits(32)
@@ -119,9 +131,10 @@ class PlayerTurns():
         return PlayerIterator(self)
 
 class Player():
-    def __init__(self, name):
+    def __init__(self, name, player_socket):
         self.name = name
         self.cards = []
+        self.socket = player_socket
 
     def get_current_cards(self):
         return self.cards
@@ -135,15 +148,34 @@ class Player():
             if current_card.color == self.cards[playable_card].color or current_card.number == self.cards[playable_card].number:
                 return self.cards.pop(playable_card)
             else:
-                print('Invalid Play')
                 return False
         except IndexError:
-            print('Invalid option')
             return False
+
+def receive_message(client_socket):
+    try:
+        message_header = client_socket.recv(HEADER_LENGTH)
+        if not len(message_header):
+            return False
+        message_length = int(message_header.decode('utf-8').strip())
+        return {'header': message_header, 'data': client_socket.recv(message_length)}
+    except Exception as e:
+        print(e)
+        return False
+
+def send_message(client_socket, message):
+    try:
+        message = message.encode('utf-8')
+        message_header = f"{len(message):<{HEADER_LENGTH}}".encode('utf-8')
+        client_socket.send(message_header + message)
+    except Exception as e:
+        print(e)
+        return False
 
 def start_game():
     end_game = False
     jugadores = PlayerTurns()
+    clients = {}
     while True:
         try:
             num_jug = int(input('How many players?: '))
@@ -152,9 +184,19 @@ def start_game():
         else:
             if num_jug > 1:
                 break
-    for j in range(0, num_jug):
-        jug_name = input(f'Name of player {j+1}: ')
-        jugadores.add_player(Player(jug_name))
+    while len(clients) < num_jug:
+        print('Waiting for players to join ...')
+        read_sockets, _, exception_sockets = select.select(sockets_list, [], sockets_list)
+        for notified_socket in read_sockets:
+            if notified_socket == server_socket:
+                client_socket, client_address = server_socket.accept()
+                user = receive_message(client_socket)
+                if user is False:
+                    continue
+                sockets_list.append(client_socket)
+                clients[client_socket] = user
+                print('New player has entered {}:{}, username: {}'.format(*client_address, user['data'].decode('utf-8')))
+                jugadores.add_player(Player(user['data'].decode('utf-8'), client_socket))
     turnos = iter(jugadores)
     cartas = Deck()
     cartas_a_repartir = cartas.deal_cards(jugadores.number_of_players())
@@ -163,21 +205,23 @@ def start_game():
     current_player = next(turnos)
     while(not end_game):
         card_drawed = None
-        print('Current card: ')
-        print(cartas.get_current_card())
-        print('---------------')
-        print(f"{current_player.name}'s turn:")
-        current_player_cards = current_player.get_current_cards()
+        #envia a todos la carta actual y de quien es el turno
+        for client_socket in clients:
+            send_message(client_socket, 'Current card:')
+            send_message(client_socket, '--------------------')
+            send_message(client_socket, f'|{cartas.get_current_card().__repr__():^27}|')
+            send_message(client_socket, '--------------------')
+            send_message(client_socket, f"{current_player.name}'s turn...")
+            current_player_cards = current_player.get_current_cards()
+        #envia al jugador del turno sus cartas y la notificacion de q es su turno
         for x in range(0,len(current_player_cards)):
-            print(f'{x}. {current_player_cards[x]}')
-        print(f'{x+1}. Draw a card')
+            send_message(current_player.socket, f'{x}. {current_player_cards[x].__repr__()}')
+        send_message(current_player.socket, f'{x+1}. Draw a card')
         valid_play = False
         while not valid_play:
-            try:
-                play = int(input("Pick a card: "))
-            except ValueError:
-                #not proud of this
-                play = 100000000000
+            send_message(current_player.socket, '-play-')
+            play = receive_message(current_player.socket)
+            play = int(play['data'])
             if play == x+1:
                 card_drawed = cartas.draw_a_card()
                 if card_drawed:
@@ -187,21 +231,17 @@ def start_game():
                 the_card = current_player.play_card(cartas.get_current_card(),play)
                 if the_card:
                     if the_card.action and 'Change' in the_card.action:
-                        while True:
-                            try:
-                                color_change = int(input("Choose a color: \n\r0. red\n\r1. green\n\r2. yellow\n\r3. blue\n\r"))
-                                the_card.color = COLORS[color_change]
-                            except(ValueError, IndexError):
-                                print('Invalid option.')
-                            else:
-                                break
+                        send_message(current_player.socket, '-color-')
+                        color_change = receive_message(current_player.socket)
+                        color_change = int(color_change['data'])
+                        the_card.color = COLORS[color_change]
                     cartas.update_current_card(the_card)
                     valid_play = True
+                else:
+                    send_message(current_player.socket, 'Invalid play/option.')
         if len(current_player.get_current_cards()) == 0:
             end_game = True
             winner = current_player
-        print('\n\r')
-        print('\n\r')
         if card_drawed:
             current_player = next(turnos)
         elif cartas.get_current_card().action == 'Change color':
@@ -223,9 +263,13 @@ def start_game():
         else:
             current_player = next(turnos)
         #print(f'la pila: {cartas.pile}')
-    print(f'The winner is {winner.name}!')
-
+    for client_socket in clients:
+        send_message(client_socket, f'The winner is {winner.name}!!')
+        send_message(client_socket, '-end-')
 start_game()
+
+
+
 
 
 
