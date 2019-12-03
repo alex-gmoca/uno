@@ -2,7 +2,6 @@ import random
 import select
 import socket
 from termcolor import colored
-from network import Network
 
 COLORS = ['red', 'green', 'yellow', 'blue']
 HEADER_LENGTH = 10
@@ -15,16 +14,8 @@ server_socket.bind((server, port))
 server_socket.listen()
 sockets_list = [server_socket]
 
-def uniqueid():
-    seed = random.getrandbits(32)
-    while True:
-       yield seed
-       seed += 1
-
 class Card():
     def __init__(self, color, number, action):
-        unique_sequence = uniqueid()
-        self.id = next(unique_sequence)
         self.color = color
         self.number = number
         self.action = action
@@ -136,6 +127,9 @@ class Player():
         self.cards = []
         self.socket = player_socket
 
+    def how_many_cards_left(self):
+        return len(self.cards)
+
     def get_current_cards(self):
         return self.cards
 
@@ -211,7 +205,7 @@ def start_game():
             send_message(client_socket, '--------------------')
             send_message(client_socket, f'|{cartas.get_current_card().__repr__():^27}|')
             send_message(client_socket, '--------------------')
-            send_message(client_socket, f"{current_player.name}'s turn...")
+            send_message(client_socket, f"{current_player.name}'s turn, {current_player.how_many_cards_left()} cards left...")
             current_player_cards = current_player.get_current_cards()
         #envia al jugador del turno sus cartas y la notificacion de q es su turno
         for x in range(0,len(current_player_cards)):
