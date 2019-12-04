@@ -149,17 +149,17 @@ class Player():
 
     def play_card(self, current_card, playable_card):
         try:
-            #castigos incoloros
+            #actions with no color
             if self.cards[playable_card].number is None and self.cards[playable_card].color is None: 
                 return self.cards.pop(playable_card)
-            #castigos con el mismo color
+            #actions with the same color
             if self.cards[playable_card].number is None and current_card.color == self.cards[playable_card].color:
                 return self.cards.pop(playable_card)
-            #castigos con la misma acción
+            #sameaction different color
             if self.cards[playable_card].number is None and current_card.action == self.cards[playable_card].action:
                 return self.cards.pop(playable_card)
-            #cartas normales
-            if self.cards[playable_card].number:
+            #normal numbers
+            if self.cards[playable_card].number is not None:
                 if current_card.color == self.cards[playable_card].color or current_card.number == self.cards[playable_card].number:
                     return self.cards.pop(playable_card)
             else:
