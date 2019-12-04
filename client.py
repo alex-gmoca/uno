@@ -33,6 +33,7 @@ while True:
                     client_socket.send(color_header + color)
                     break
         elif message == '-play-':
+            sys.stdout.write('\a')
             play = ''
             try:
                 play = int(input("Pick a card: "))
