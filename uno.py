@@ -155,13 +155,15 @@ class Player():
             #actions with the same color
             if self.cards[playable_card].number is None and current_card.color == self.cards[playable_card].color:
                 return self.cards.pop(playable_card)
-            #sameaction different color
+            #same action different color
             if self.cards[playable_card].number is None and current_card.action == self.cards[playable_card].action:
                 return self.cards.pop(playable_card)
             #normal numbers
             if self.cards[playable_card].number is not None:
                 if current_card.color == self.cards[playable_card].color or current_card.number == self.cards[playable_card].number:
                     return self.cards.pop(playable_card)
+                else:
+                    return False
             else:
                 return False
         except IndexError:
