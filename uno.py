@@ -86,6 +86,7 @@ class PlayerIterator:
     def __init__(self, players):
        self._players = players
        self._index = 0
+
     def __next__(self):
         if self._players.direction:
             if self._index >= len(self._players.data):
@@ -98,6 +99,19 @@ class PlayerIterator:
                 self._index = len(self._players.data)-1
             result = self._players.data[self._index]
             self._index -= 1
+            return result
+
+    def whos_next(self):
+        aux = self._index
+        if self._players.direction:    
+            if self._index >= len(self._players.data):
+                aux = 0
+            result = self._players.data[aux]
+            return result
+        else:
+            if self._index < 0:
+                aux = len(self._players.data)-1
+            result = self._players.data[aux]
             return result
 
 class PlayerTurns():
@@ -205,7 +219,7 @@ def start_game():
             send_message(client_socket, '--------------------')
             send_message(client_socket, f'|{cartas.get_current_card().__repr__():^27}|')
             send_message(client_socket, '--------------------')
-            send_message(client_socket, f"{current_player.name}'s turn, {current_player.how_many_cards_left()} cards left...")
+            send_message(client_socket, f"{current_player.name}'s turn, {current_player.how_many_cards_left()} cards left... Next turn will be {turnos.whos_next().name}")
             current_player_cards = current_player.get_current_cards()
         #envia al jugador del turno sus cartas y la notificacion de q es su turno
         for x in range(0,len(current_player_cards)):
@@ -221,6 +235,9 @@ def start_game():
                 if card_drawed:
                     current_player.cards.append(card_drawed)
                     valid_play = True
+                    for client_socket in clients:
+                        if client_socket != current_player.socket:
+                            send_message(client_socket, f'{current_player.name} draw a card!')
             else:
                 the_card = current_player.play_card(cartas.get_current_card(),play)
                 if the_card:
