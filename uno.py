@@ -7,7 +7,7 @@ COLORS = ['red', 'green', 'yellow', 'blue']
 HEADER_LENGTH = 10
 
 server = "the server ip"
-port = 5555
+port = 5556
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 server_socket.bind((server, port))
@@ -275,6 +275,10 @@ def start_game():
             current_player = next(turnos)
         #print(f'la pila: {cartas.pile}')
     for client_socket in clients:
+        send_message(client_socket, 'Current card:')
+        send_message(client_socket, '--------------------')
+        send_message(client_socket, f'|{cartas.get_current_card().__repr__():^27}|')
+        send_message(client_socket, '--------------------')
         send_message(client_socket, f'The winner is {winner.name}!!')
         send_message(client_socket, '-end-')
 start_game()
