@@ -7,7 +7,7 @@ COLORS = ['red', 'green', 'yellow', 'blue']
 HEADER_LENGTH = 10
 
 server = "the server ip"
-port = 5556
+port = 5555
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 server_socket.bind((server, port))
