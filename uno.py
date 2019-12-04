@@ -229,15 +229,15 @@ def start_game():
             send_message(client_socket, f"{current_player.name}'s turn, {current_player.how_many_cards_left()} cards left... Next turn will be {turnos.whos_next().name}")
             current_player_cards = current_player.get_current_cards()
         #envia al jugador del turno sus cartas y la notificacion de q es su turno
+        send_message(current_player.socket, '0. Draw a card')
         for x in range(0,len(current_player_cards)):
-            send_message(current_player.socket, f'{x}. {current_player_cards[x].__repr__()}')
-        send_message(current_player.socket, f'{x+1}. Draw a card')
+            send_message(current_player.socket, f'{x+1}. {current_player_cards[x].__repr__()}')
         valid_play = False
         while not valid_play:
             send_message(current_player.socket, '-play-')
             play = receive_message(current_player.socket)
             play = int(play['data'])
-            if play == x+1:
+            if play == 0:
                 card_drawed = cartas.draw_a_card()
                 if card_drawed:
                     current_player.cards.append(card_drawed)
@@ -246,10 +246,16 @@ def start_game():
                         if client_socket != current_player.socket:
                             send_message(client_socket, f'{current_player.name} draw a card!')
             else:
-                the_card = current_player.play_card(cartas.get_current_card(),play)
+                the_card = current_player.play_card(cartas.get_current_card(),play-1)
                 if the_card:
                     if the_card.action and 'Change' in the_card.action:
-                        send_message(current_player.socket, '-color-')
+                        color_text = colored("0. red\n\r",'red')
+                        color_text += colored("1. green\n\r",'green')
+                        color_text += colored("2. yellow\n\r",'yellow')
+                        color_text += colored("3. blue\n\r",'blue')
+                        color_text += "Choose a color: "
+                        send_message(current_player.socket, '-color-' + color_text)
+                        send_message(current_player.socket, color_text)
                         color_change = receive_message(current_player.socket)
                         color_change = int(color_change['data'])
                         the_card.color = COLORS[color_change]
@@ -267,6 +273,8 @@ def start_game():
         elif cartas.get_current_card().action == 'Reverse':
             jugadores.change_direction(turnos)
             current_player = next(turnos)
+            if num_jug == 2:
+                current_player = next(turnos)    
         elif cartas.get_current_card().action == 'Skip':
             current_player = next(turnos)
             current_player = next(turnos)

@@ -6,7 +6,7 @@ import sys
 HEADER_LENGTH = 10
 
 username = input("what's your name? ")
-server = "the server ip"
+server = " the server ip"
 port = 5555
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client_socket.connect((server, port))
@@ -20,10 +20,10 @@ while True:
         message_header = client_socket.recv(HEADER_LENGTH)
         message_length = int(message_header.decode('utf-8').strip())
         message = (client_socket.recv(message_length).decode('utf-8'))
-        if message == '-color-':
+        if '-color-' in message:
             while True:
                 try:
-                    color_change = int(input("Choose a color: \n\r0. red\n\r1. green\n\r2. yellow\n\r3. blue\n\r"))
+                    color_change = int(input(message[7:]))
                 except(ValueError, IndexError):
                     print('Invalid option.')
                 else:
