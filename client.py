@@ -4,10 +4,9 @@ import json
 import sys
 
 HEADER_LENGTH = 10
-
-username = input("what's your name? ")
-server = " the server ip"
-port = 5555
+server = input("What's the server ip? ")
+port = int(input("What's the server port?(5555) ") or "5555")
+username = input("What's your name? ")
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client_socket.connect((server, port))
 client_socket.setblocking(False)
